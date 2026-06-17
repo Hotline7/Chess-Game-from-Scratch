@@ -7,11 +7,23 @@ namespace ChessConsole
     {
         static void Main(string[] args)
         {
-            int e1Square = 4;
-            ulong kingMovesFromE1 = MoveGenerator.KingAttacks[e1Square];
+            // 1. Create our board state with the pieces in starting positions
+            Bitboard board = new Bitboard();
+
+            // 2. Choose a square index for our imaginary Rook (27 = d4)
+            int d4Square = 27; 
             
-            Console.WriteLine("King Attack Pattern from e1:");
-            PrintBitboard(kingMovesFromE1);
+            // 3. Pass BOTH parameters: the square index AND the dynamic occupancy mask
+            ulong rookAttacksFromD4 = MoveGenerator.GetRookMoves(d4Square, board.CombinedOccupancy);
+
+            Console.WriteLine("Rook Attack Pattern from d4 (with standard starting layout blockers):");
+            PrintBitboard(rookAttacksFromD4);
+            //Console.WriteLine(Convert.ToString((long)rookAttacksFromD4, 2));
+            //Console.WriteLine($"0x{rookAttacksFromD4:X16}");
+            //Console.WriteLine($"Occupied: 0x{board.CombinedOccupancy:X16}");
+
+            PrintBitboard(1UL << 27);
+
         }
 
         public static void PrintBitboard(ulong bitboard)

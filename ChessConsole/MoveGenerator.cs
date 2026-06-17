@@ -81,7 +81,64 @@ namespace ChessConsole
 
                 KingAttacks[square] = attacks;
             }
+        }
 
+        public static ulong GetRookMoves(int square, ulong occupied)
+        {
+            ulong moves = 0UL;
+
+            int rank = square / 8;
+            int file = square % 8;
+
+            // North
+            for (int r = rank + 1; r < 8; r++)
+            {
+                int targetIndex = r * 8 + file;
+                ulong target = 1UL << targetIndex;
+
+                moves |= target;
+
+                if ((occupied & target) != 0)
+                    break;
+            }
+
+            // South
+            for (int r = rank - 1; r >= 0; r--)
+            {
+                int targetIndex = r * 8 + file;
+                ulong target = 1UL << targetIndex;
+
+                moves |= target;
+
+                if ((occupied & target) != 0)
+                    break;
+            }
+
+            // East
+            for (int f = file + 1; f < 8; f++)
+            {
+                int targetIndex = rank * 8 + f;
+                ulong target = 1UL << targetIndex;
+
+                moves |= target;
+
+                if ((occupied & target) != 0)
+                    break;
+            }
+
+            // West
+            for (int f = file - 1; f >= 0; f--)
+            {
+                int targetIndex = rank * 8 + f;
+                ulong target = 1UL << targetIndex;
+
+                moves |= target;
+
+                if ((occupied & target) != 0)
+                    break;
+            }
+
+            return moves;
         }
     }
 }
