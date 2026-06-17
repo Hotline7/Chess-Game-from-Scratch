@@ -1,0 +1,15 @@
+D:\Projects\ChessGame\ChessConsole\bin\Debug\net6.0\ChessConsole.exe
+D:\Projects\ChessGame\ChessConsole\bin\Debug\net6.0\ChessConsole.deps.json
+D:\Projects\ChessGame\ChessConsole\bin\Debug\net6.0\ChessConsole.runtimeconfig.json
+D:\Projects\ChessGame\ChessConsole\bin\Debug\net6.0\ChessConsole.dll
+D:\Projects\ChessGame\ChessConsole\bin\Debug\net6.0\ChessConsole.pdb
+D:\Projects\ChessGame\ChessConsole\obj\Debug\net6.0\ChessConsole.csproj.AssemblyReference.cache
+D:\Projects\ChessGame\ChessConsole\obj\Debug\net6.0\ChessConsole.GeneratedMSBuildEditorConfig.editorconfig
+D:\Projects\ChessGame\ChessConsole\obj\Debug\net6.0\ChessConsole.AssemblyInfoInputs.cache
+D:\Projects\ChessGame\ChessConsole\obj\Debug\net6.0\ChessConsole.AssemblyInfo.cs
+D:\Projects\ChessGame\ChessConsole\obj\Debug\net6.0\ChessConsole.csproj.CoreCompileInputs.cache
+D:\Projects\ChessGame\ChessConsole\obj\Debug\net6.0\ChessConsole.dll
+D:\Projects\ChessGame\ChessConsole\obj\Debug\net6.0\refint\ChessConsole.dll
+D:\Projects\ChessGame\ChessConsole\obj\Debug\net6.0\ChessConsole.pdb
+D:\Projects\ChessGame\ChessConsole\obj\Debug\net6.0\ChessConsole.genruntimeconfig.cache
+D:\Projects\ChessGame\ChessConsole\obj\Debug\net6.0\ref\ChessConsole.dll
