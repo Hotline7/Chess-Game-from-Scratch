@@ -7,17 +7,14 @@ namespace ChessConsole
     {
         static void Main(string[] args)
         {
-            // This represents a white pawn on e2 (Bit 12) and a White Knight on b1 (Bit 1)
-            // Bit 12 = 1 << 12 (value 4096)
-            // Bit 1 = 1 << 1 (value: 2)
-            // Combined value = 4098
-            ulong sampleBitboard = 4098UL;
-
-            Console.WriteLine("Visualising sample bitboard");
-            PrintBitBoard(sampleBitboard);
+            int e1Square = 4;
+            ulong kingMovesFromE1 = MoveGenerator.KingAttacks[e1Square];
+            
+            Console.WriteLine("King Attack Pattern from e1:");
+            PrintBitboard(kingMovesFromE1);
         }
 
-        public static void PrintBitBoard(ulong bitboard)
+        public static void PrintBitboard(ulong bitboard)
         {
             // Loop from rank 8 (index 7) down to Rank 1 (index 0)
             for (int rank = 7; rank >=0; rank--)
