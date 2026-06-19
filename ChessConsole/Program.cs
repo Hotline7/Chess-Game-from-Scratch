@@ -7,17 +7,16 @@ namespace ChessConsole
     {
         static void Main(string[] args)
         {
-            // 1. Create our board state with the pieces in starting positions
             Bitboard board = new Bitboard();
 
-            // 2. Choose a square index for our imaginary Rook (27 = d4)
-            int d4Square = 27; 
-            
-            // 3. Pass BOTH parameters: the square index AND the dynamic occupancy mask
-            ulong queenAttacksFromD4 = MoveGenerator.GetQueenMoves(d4Square, board.CombinedOccupancy);
-                        
-            Console.WriteLine("Queen Attack Pattern from d4 (with standard layout blockers):");
-            PrintBitboard(queenAttacksFromD4);
+            // Extract white pawns, overall occupancy, and black targets
+            ulong whitePawns = board.Pieces[(int)Colour.White, (int)Piece.Pawn];
+            ulong enemyPieces = board.ColourOccupancy[(int)Colour.Black];
+
+            ulong totalPawnMoves = MoveGenerator.GetPawnMoves(whitePawns, board.CombinedOccupancy, enemyPieces, Colour.White);
+
+            Console.WriteLine("All Valid White Pawn Moves from Starting Position:");
+            PrintBitboard(totalPawnMoves);
         }
 
         public static void PrintBitboard(ulong bitboard)

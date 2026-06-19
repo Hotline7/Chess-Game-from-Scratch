@@ -190,6 +190,53 @@ namespace ChessConsole
         public static ulong GetQueenMoves(int square, ulong occupied)
         {
             return GetRookMoves(square, occupied) | GetBishopMoves (square, occupied);
-        }    
+        }
+
+
+        public static ulong GetPawnMoves(ulong pawns, ulong occupied, ulong enemyPieces, Colour colour)
+        {
+            ulong moves = 0UL;
+            
+            // File masks from class constants
+            ulong notA = ~0x0101010101010101UL;
+            ulong notH = ~0x8080808080808080UL;
+
+            if (colour == Colour.White)
+            {
+                // Single Push
+                ulong singlePush = (pawns << 8) & ~occupied;
+                moves |= singlePush;
+
+                // Double Push (Only from Rank 2: bits 8-15 -> 0x000000000000FF00UL)
+                ulong rank2 = 0x000000000000FF00UL;
+                ulong doublePush = ((pawns & rank2) << 8) & ~occupied; // first step empty
+                doublePush = (doublePush << 8) & ~occupied;            // second step empty
+                moves |= doublePush;
+
+                // Captures (Left = +7, Right = +9)
+                ulong captureLeft = (pawns << 7) & notH & enemyPieces;
+                ulong captureRight = (pawns << 9) & notA & enemyPieces;
+                moves |= captureLeft | captureRight;
+            }
+            else // Black's Turn
+            {
+                // Single Push (Down 1 = >> 8)
+                ulong singlePush = (pawns >> 8) & ~occupied;
+                moves |= singlePush;
+
+                // Double Push (Only from Rank 7: bits 48-55 -> 0x00FF000000000000UL)
+                ulong rank7 = 0x00FF000000000000UL;
+                ulong doublePush = ((pawns & rank7) >> 8) & ~occupied;
+                doublePush = (doublePush >> 8) & ~occupied;
+                moves |= doublePush;
+
+                // Captures (Left = -9, Right = -7)
+                ulong captureLeft = (pawns >> 9) & notH & enemyPieces;
+                ulong captureRight = (pawns >> 7) & notA & enemyPieces;
+                moves |= captureLeft | captureRight;
+            }
+
+            return moves;
+        }
     }
 }
