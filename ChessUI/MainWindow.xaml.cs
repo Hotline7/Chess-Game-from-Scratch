@@ -11,6 +11,7 @@ namespace ChessUI
         private Bitboard _board;
         private bool _isFlipped = false;
         private int _selectedSquare = -1; // -1 means no piece is selected right now
+        private System.Collections.Generic.HashSet<int> _legalTargetsForSelectedPiece = new System.Collections.Generic.HashSet<int>();
 
         public MainWindow()
         {
@@ -36,19 +37,47 @@ namespace ChessUI
 
                     // 1. Establish background styling framework
                     bool isLightSquare = (rank + file) % 2 != 0;
+                    Color baseColor = isLightSquare ? Color.FromRgb(240, 217, 181) : Color.FromRgb(181, 136, 99);
+
+                    // If this is the piece the player clicked, keep it highlighted Green
+                    if (squareIndex == _selectedSquare)
+                    {
+                        baseColor = Colors.LightGreen;
+                    }
+
                     Border square = new Border
                     {
-                        Background = new SolidColorBrush(isLightSquare ? Color.FromRgb(240, 217, 181) : Color.FromRgb(181, 136, 99)),
-                        Tag = squareIndex // Track the bitboard structural coordinate directly on the UI object
+                        Background = new SolidColorBrush(baseColor),
+                        Tag = squareIndex
                     };
 
                     square.MouseLeftButtonDown += Square_MouseLeftButtonDown;
 
+                    // Create a Grid container inside the border so we can layer the piece image and the move indicator on top of each other
+                    Grid cellGrid = new Grid();
+                    square.Child = cellGrid;
+
                     // 2. Query our bitboard to identify what piece occupies this block
-                    Image pieceImage = GetPieceImageForSquare(squareIndex);
+                    Image? pieceImage = GetPieceImageForSquare(squareIndex);
                     if (pieceImage != null)
                     {
-                        square.Child = pieceImage;
+                        cellGrid.Children.Add(pieceImage);
+                    }
+
+                    // 3. NEW: Draw the legal move visual indicator shadow
+                    if (_legalTargetsForSelectedPiece.Contains(squareIndex))
+                    {
+                        // Create a subtle dot overlay
+                        System.Windows.Shapes.Ellipse dot = new System.Windows.Shapes.Ellipse
+                        {
+                            Width = 16,
+                            Height = 16,
+                            Fill = new SolidColorBrush(Color.FromArgb(80, 0, 0, 0)), // Semi-transparent black shadow
+                            HorizontalAlignment = HorizontalAlignment.Center,
+                            VerticalAlignment = VerticalAlignment.Center,
+                            IsHitTestVisible = false // Ensure click passes through
+                        };
+                        cellGrid.Children.Add(dot);
                     }
 
                     // Append grid element to layout hierarchy
@@ -103,30 +132,42 @@ namespace ChessUI
                     Colour activeColor = _board.IsWhiteToMove ? Colour.White : Colour.Black;
                     ulong friendlyOccupancy = _board.ColourOccupancy[(int)activeColor];
 
-                    // Verify they clicked one of their own active pieces before selecting
                     if ((friendlyOccupancy & mask) != 0)
                     {
                         _selectedSquare = squareIndex;
-                        clickedSquare.Background = new SolidColorBrush(Colors.LightGreen); // Highlight it!
+                        
+                        // Fetch all strict legal moves and harvest target squares for just this piece
+                        System.Collections.Generic.List<Move> legalMoves = MoveGenerator.GenerateLegalMoves(_board);
+                        _legalTargetsForSelectedPiece.Clear();
+                        
+                        foreach (Move move in legalMoves)
+                        {
+                            if (move.FromSquare == _selectedSquare)
+                            {
+                                _legalTargetsForSelectedPiece.Add(move.ToSquare);
+                            }
+                        }
+
+                        // Refresh the graphics layer entirely to show the green highlight and shadows
+                        RenderBoard();
                     }
                 }
-                // Case 2: Second click (Target destination destination)
+                // Case 2: Second click (Target destination)
                 else
                 {
                     int fromSquare = _selectedSquare;
                     int toSquare = squareIndex;
-                    _selectedSquare = -1; // Clear selection state immediately
+                    
+                    // Clear selection states immediately
+                    _selectedSquare = -1; 
+                    _legalTargetsForSelectedPiece.Clear();
 
-                    // 1. Fetch all strict legal moves for the current board state
                     System.Collections.Generic.List<Move> legalMoves = MoveGenerator.GenerateLegalMoves(_board);
-
-                    // 2. See if our intended action matches any legal moves
                     Move chosenMove = new Move();
                     bool isValid = false;
 
                     foreach (Move move in legalMoves)
                     {
-                        // Note: Checking basic coordinates (ignoring special flags for now)
                         if (move.FromSquare == fromSquare && move.ToSquare == toSquare)
                         {
                             chosenMove = move;
@@ -137,11 +178,9 @@ namespace ChessUI
 
                     if (isValid)
                     {
-                        // Execute permanently on our core bitboard structures!
                         _board.MakeMove(chosenMove);
                     }
 
-                    // Refresh the graphics layer entirely
                     RenderBoard();
                 }
             }
