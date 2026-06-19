@@ -63,5 +63,55 @@ namespace ChessConsole
 
             CombinedOccupancy = ColourOccupancy[(int)Colour.White] | ColourOccupancy[(int)Colour.Black];
         }
+
+        public Bitboard Clone()
+        {
+            Bitboard clone = new Bitboard();
+            Array.Copy(this.Pieces, clone.Pieces, this.Pieces.Length);
+            Array.Copy(this.ColourOccupancy, clone.ColourOccupancy, this.ColourOccupancy.Length);
+            clone.CombinedOccupancy = this.CombinedOccupancy;
+            clone.IsWhiteToMove = this.IsWhiteToMove;
+            return clone;
+        }
+
+        public void MakeMove(Move move)
+        {
+            Colour us = IsWhiteToMove ? Colour.White : Colour.Black;
+            Colour them = IsWhiteToMove ? Colour.Black : Colour.White;
+
+            ulong fromMask = 1UL << move.FromSquare;
+            ulong toMask = 1UL << move.ToSquare;
+
+            // Find what piece is moving
+            int movingPieceType = -1;
+            for (int p = 0; p < 6; p++)
+            {
+                if ((Pieces[(int)us, p] & fromMask) != 0)
+                {
+                    movingPieceType = p;
+                    break;
+                }
+            }
+
+            if (movingPieceType == -1) return; // Safety check
+
+            // 1. Move our piece execution
+            Pieces[(int)us, movingPieceType] &= ~fromMask; // Remove from source
+            Pieces[(int)us, movingPieceType] |= toMask;  // Place on target
+
+            // 2. Handle captures (if an enemy piece sits on the target square, vaporize it)
+            for (int p = 0; p < 6; p++)
+            {
+                if ((Pieces[(int)them, p] & toMask) != 0)
+                {
+                    Pieces[(int)them, p] &= ~toMask;
+                    break;
+                }
+            }
+
+            // 3. Recompute entire occupancy and pass the turn
+            IsWhiteToMove = !IsWhiteToMove;
+            UpdateOccupancy();
+        }
     }
 }

@@ -241,6 +241,45 @@ namespace ChessConsole
             return moves;
         }
 
+        public static bool IsSquareAttacked(int square, Colour attackerColour, Bitboard board)
+        {
+            ulong occupied = board.CombinedOccupancy;
+
+            // 1. Check Enemy Pawns
+            // If we pretend a friendly pawn is on this square, can it strike an enemy pawn?
+            Colour defenderColour = attackerColour == Colour.White ? Colour.Black : Colour.White;
+            ulong enemyPawns = board.Pieces[(int)attackerColour, (int)Piece.Pawn];
+            // Use the pawn attack mechanics we already wrote, but looking from our square
+            ulong pawnMask = GetPawnMoves(1UL << square, occupied, 0UL, defenderColour);
+            // Filter down to only pawn capture squares
+            ulong notA = ~0x0101010101010101UL;
+            ulong notH = ~0x8080808080808080UL;
+            ulong pawnAttacks = defenderColour == Colour.White 
+                ? (((1UL << square) << 7) & notH) | (((1UL << square) << 9) & notA)
+                : (((1UL << square) >> 9) & notH) | (((1UL << square) >> 7) & notA);
+            if ((pawnAttacks & enemyPawns) != 0) return true;
+
+            // 2. Check Enemy Knights
+            ulong enemyKnights = board.Pieces[(int)attackerColour, (int)Piece.Knight];
+            if ((KnightAttacks[square] & enemyKnights) != 0) return true;
+
+            // 3. Check Enemy Kings
+            ulong enemyKing = board.Pieces[(int)attackerColour, (int)Piece.King];
+            if ((KingAttacks[square] & enemyKing) != 0) return true;
+
+            // 4. Check Enemy Bishops / Queens (Diagonals)
+            ulong enemyDiagonalSliders = board.Pieces[(int)attackerColour, (int)Piece.Bishop] | 
+                                        board.Pieces[(int)attackerColour, (int)Piece.Queen];
+            if ((GetBishopMoves(square, occupied) & enemyDiagonalSliders) != 0) return true;
+
+            // 5. Check Enemy Rooks / Queens (Straight Lines)
+            ulong enemyStraightSliders = board.Pieces[(int)attackerColour, (int)Piece.Rook] | 
+                                        board.Pieces[(int)attackerColour, (int)Piece.Queen];
+            if ((GetRookMoves(square, occupied) & enemyStraightSliders) != 0) return true;
+
+            return false;
+        }
+
         public static List<Move> GeneratePseudoLegalMoves(Bitboard board)
         {
             List<Move> moveList = new List<Move>();
@@ -371,6 +410,37 @@ namespace ChessConsole
             }
 
             return moveList;
+        }
+
+        public static List<Move> GenerateLegalMoves(Bitboard board)
+        {
+            List<Move> pseudoMoves = GeneratePseudoLegalMoves(board);
+            List<Move> legalMoves = new List<Move>();
+
+            Colour us = board.IsWhiteToMove ? Colour.White : Colour.Black;
+            Colour them = board.IsWhiteToMove ? Colour.Black : Colour.White;
+
+            foreach (Move move in pseudoMoves)
+            {
+                // 1. Clone the current board layout to simulate safely
+                Bitboard simulatedBoard = board.Clone();
+
+                // 2. Execute the move on the simulator
+                simulatedBoard.MakeMove(move);
+
+                // 3. Locate where our King is standing right now
+                // (Note: if the moving piece WAS the king, it's now on move.ToSquare!)
+                ulong kingMask = simulatedBoard.Pieces[(int)us, (int)Piece.King];
+                int kingSquare = System.Numerics.BitOperations.TrailingZeroCount(kingMask);
+
+                // 4. Run tactical radar. If enemy cannot attack our king square, the move is legal!
+                if (!IsSquareAttacked(kingSquare, them, simulatedBoard))
+                {
+                    legalMoves.Add(move);
+                }
+            }
+
+            return legalMoves;
         }
     }
 }

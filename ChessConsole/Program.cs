@@ -8,13 +8,11 @@ namespace ChessConsole
         static void Main(string[] args)
         {
             Bitboard board = new Bitboard();
-            List<Move> activeMoves = MoveGenerator.GeneratePseudoLegalMoves(board);
+            
+            // Switch to our strict legal move filter layer!
+            List<Move> strictLegalMoves = MoveGenerator.GenerateLegalMoves(board);
 
-            Console.WriteLine($"Total Non-Pawn Moves Generated: {activeMoves.Count}");
-            foreach (Move move in activeMoves)
-            {
-                Console.WriteLine($"- {move}");
-            }
+            Console.WriteLine($"Total Strict Rule-Legal Moves: {strictLegalMoves.Count}");
         }
 
         public static void PrintBitboard(ulong bitboard)
