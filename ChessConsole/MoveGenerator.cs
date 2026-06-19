@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using System.Numerics;
 
 namespace ChessConsole
 {
@@ -237,6 +239,138 @@ namespace ChessConsole
             }
 
             return moves;
+        }
+
+        public static List<Move> GeneratePseudoLegalMoves(Bitboard board)
+        {
+            List<Move> moveList = new List<Move>();
+
+            // 1. Identify active player and opponent positions
+            Colour us = board.IsWhiteToMove ? Colour.White : Colour.Black;
+            ulong friendlyPieces = board.ColourOccupancy[(int)us];
+            ulong occupied = board.CombinedOccupancy;
+
+            // =========================================================================
+            // PAWNS
+            // =========================================================================
+            ulong pawns = board.Pieces[(int)us, (int)Piece.Pawn];
+            ulong enemyPieces = board.ColourOccupancy[board.IsWhiteToMove ? (int)Colour.Black : (int)Colour.White];
+
+            while (pawns != 0)
+            {
+                int fromSquare = BitOperations.TrailingZeroCount(pawns);
+                
+                // Isolate this single pawn to calculate its specific moves
+                ulong singlePawnMask = 1UL << fromSquare;
+                ulong attackMask = GetPawnMoves(singlePawnMask, occupied, enemyPieces, us);
+
+                while (attackMask != 0)
+                {
+                    int toSquare = BitOperations.TrailingZeroCount(attackMask);
+                    
+                    // Check if this move was a double pawn push to flag it properly
+                    int flag = 0;
+                    if (Math.Abs(toSquare - fromSquare) == 16)
+                    {
+                        flag = 1; // Double Pawn Push flag
+                    }
+
+                    moveList.Add(new Move(fromSquare, toSquare, flag));
+                    attackMask &= (attackMask - 1);
+                }
+
+                pawns &= (pawns - 1);
+            }
+
+            // =========================================================================
+            // KNIGHTS
+            // =========================================================================
+            ulong knights = board.Pieces[(int)us, (int)Piece.Knight];
+            while (knights != 0)
+            {
+                int fromSquare = BitOperations.TrailingZeroCount(knights);
+                ulong attackMask = KnightAttacks[fromSquare] & ~friendlyPieces;
+                while (attackMask != 0)
+                {
+                    int toSquare = BitOperations.TrailingZeroCount(attackMask);
+                    moveList.Add(new Move(fromSquare, toSquare));
+                    attackMask &= (attackMask - 1);
+                }
+                knights &= (knights - 1);
+            }
+
+            // =========================================================================
+            // KINGS
+            // =========================================================================
+            ulong king = board.Pieces[(int)us, (int)Piece.King];
+            while (king != 0)
+            {
+                int fromSquare = BitOperations.TrailingZeroCount(king);
+                ulong attackMask = KingAttacks[fromSquare] & ~friendlyPieces;
+                while (attackMask != 0)
+                {
+                    int toSquare = BitOperations.TrailingZeroCount(attackMask);
+                    moveList.Add(new Move(fromSquare, toSquare));
+                    attackMask &= (attackMask - 1);
+                }
+                king &= (king - 1);
+            }
+
+            // =========================================================================
+            // BISHOPS
+            // =========================================================================
+            ulong bishops = board.Pieces[(int)us, (int)Piece.Bishop];
+            while (bishops != 0)
+            {
+                int fromSquare = BitOperations.TrailingZeroCount(bishops);
+                // Feed live board occupancy into your custom ray caster
+                ulong attackMask = GetBishopMoves(fromSquare, occupied) & ~friendlyPieces;
+                while (attackMask != 0)
+                {
+                    int toSquare = BitOperations.TrailingZeroCount(attackMask);
+                    moveList.Add(new Move(fromSquare, toSquare));
+                    attackMask &= (attackMask - 1);
+                }
+                bishops &= (bishops - 1);
+            }
+
+            // =========================================================================
+            // ROOKS
+            // =========================================================================
+            ulong rooks = board.Pieces[(int)us, (int)Piece.Rook];
+            while (rooks != 0)
+            {
+                int fromSquare = BitOperations.TrailingZeroCount(rooks);
+                // Feed live board occupancy into your custom ray caster
+                ulong attackMask = GetRookMoves(fromSquare, occupied) & ~friendlyPieces;
+                while (attackMask != 0)
+                {
+                    int toSquare = BitOperations.TrailingZeroCount(attackMask);
+                    moveList.Add(new Move(fromSquare, toSquare));
+                    attackMask &= (attackMask - 1);
+                }
+                rooks &= (rooks - 1);
+            }
+
+            // =========================================================================
+            // QUEENS
+            // =========================================================================
+            ulong queens = board.Pieces[(int)us, (int)Piece.Queen];
+            while (queens != 0)
+            {
+                int fromSquare = BitOperations.TrailingZeroCount(queens);
+                // Feed live board occupancy into your custom ray caster
+                ulong attackMask = GetQueenMoves(fromSquare, occupied) & ~friendlyPieces;
+                while (attackMask != 0)
+                {
+                    int toSquare = BitOperations.TrailingZeroCount(attackMask);
+                    moveList.Add(new Move(fromSquare, toSquare));
+                    attackMask &= (attackMask - 1);
+                }
+                queens &= (queens - 1);
+            }
+
+            return moveList;
         }
     }
 }

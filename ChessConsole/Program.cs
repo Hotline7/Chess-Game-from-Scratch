@@ -7,18 +7,14 @@ namespace ChessConsole
     {
         static void Main(string[] args)
         {
-            int e2 = 12; // Start square index
-            int e4 = 28; // Target square index
-            int doublePushFlag = 1; 
+            Bitboard board = new Bitboard();
+            List<Move> activeMoves = MoveGenerator.GeneratePseudoLegalMoves(board);
 
-            // Create a move object (packs everything into a 16-bit ushort under the hood)
-            Move move = new Move(e2, e4, doublePushFlag);
-
-            Console.WriteLine($"Packed Move Int Value: {move.Value}");
-            Console.WriteLine($"Unpacked From Square Index: {move.FromSquare}");
-            Console.WriteLine($"Unpacked To Square Index: {move.ToSquare}");
-            Console.WriteLine($"Unpacked Flag Value: {move.Flags}");
-            Console.WriteLine($"Human notation: {move}");
+            Console.WriteLine($"Total Non-Pawn Moves Generated: {activeMoves.Count}");
+            foreach (Move move in activeMoves)
+            {
+                Console.WriteLine($"- {move}");
+            }
         }
 
         public static void PrintBitboard(ulong bitboard)
