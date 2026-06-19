@@ -7,16 +7,18 @@ namespace ChessConsole
     {
         static void Main(string[] args)
         {
-            Bitboard board = new Bitboard();
+            int e2 = 12; // Start square index
+            int e4 = 28; // Target square index
+            int doublePushFlag = 1; 
 
-            // Extract white pawns, overall occupancy, and black targets
-            ulong whitePawns = board.Pieces[(int)Colour.White, (int)Piece.Pawn];
-            ulong enemyPieces = board.ColourOccupancy[(int)Colour.Black];
+            // Create a move object (packs everything into a 16-bit ushort under the hood)
+            Move move = new Move(e2, e4, doublePushFlag);
 
-            ulong totalPawnMoves = MoveGenerator.GetPawnMoves(whitePawns, board.CombinedOccupancy, enemyPieces, Colour.White);
-
-            Console.WriteLine("All Valid White Pawn Moves from Starting Position:");
-            PrintBitboard(totalPawnMoves);
+            Console.WriteLine($"Packed Move Int Value: {move.Value}");
+            Console.WriteLine($"Unpacked From Square Index: {move.FromSquare}");
+            Console.WriteLine($"Unpacked To Square Index: {move.ToSquare}");
+            Console.WriteLine($"Unpacked Flag Value: {move.Flags}");
+            Console.WriteLine($"Human notation: {move}");
         }
 
         public static void PrintBitboard(ulong bitboard)
