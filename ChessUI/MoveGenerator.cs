@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Numerics;
 
 namespace ChessUI
+
 {
     public static class MoveGenerator
     {
@@ -441,6 +442,54 @@ namespace ChessUI
             }
 
             return legalMoves;
+        }
+        public static string EvaluateGameEndState(Bitboard board)
+        {
+            // 1. Get all strict rule-legal moves for the active player
+            System.Collections.Generic.List<Move> legalMoves = GenerateLegalMoves(board);
+
+            // If they have legal options left, the game is definitely not over
+            if (legalMoves.Count > 0)
+            {
+                // Double check if they are in "Check" just to display a warning
+                Colour us = board.IsWhiteToMove ? Colour.White : Colour.Black;
+                Colour them = board.IsWhiteToMove ? Colour.Black : Colour.White;
+                ulong kingMask = board.Pieces[(int)us, (int)Piece.King];
+                int kingSquare = System.Numerics.BitOperations.TrailingZeroCount(kingMask);
+
+                // Debugging Start
+                Console.WriteLine($"Legal moves found: {legalMoves.Count}");
+
+                foreach (Move move in legalMoves)
+                {
+                    Console.WriteLine($"{move.FromSquare} -> {move.ToSquare}");
+                }
+                // Debugging End
+
+                if (IsSquareAttacked(kingSquare, them, board))
+                {
+                    return "Check";
+                }
+                return "Active";
+            }
+
+            // 2. If we reach here, legal moves == 0. The game is over!
+            Colour activePlayer = board.IsWhiteToMove ? Colour.White : Colour.Black;
+            Colour opponent = board.IsWhiteToMove ? Colour.Black : Colour.White;
+            
+            ulong activeKingMask = board.Pieces[(int)activePlayer, (int)Piece.King];
+            int activeKingSquare = System.Numerics.BitOperations.TrailingZeroCount(activeKingMask);
+
+            // Check if the helpless King is currently under fire
+            if (IsSquareAttacked(activeKingSquare, opponent, board))
+            {
+                string winner = board.IsWhiteToMove ? "Black" : "White";
+                return $"Checkmate! {winner} wins the game.";
+            }
+            else
+            {
+                return "Draw by Stalemate!";
+            }
         }
     }
 }

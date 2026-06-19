@@ -148,7 +148,6 @@ namespace ChessUI
                             }
                         }
 
-                        // Refresh the graphics layer entirely to show the green highlight and shadows
                         RenderBoard();
                     }
                 }
@@ -178,9 +177,35 @@ namespace ChessUI
 
                     if (isValid)
                     {
+                        // 1. Physically update the board layout configurations
                         _board.MakeMove(chosenMove);
+
+                        // 2. FORCE the UI to draw the piece landing on its new square BEFORE any alert box fires
+                        RenderBoard();
+
+                        // 3. Let WPF refresh its window handles instantly
+                        Application.Current.Dispatcher.Invoke(System.Windows.Threading.DispatcherPriority.Render, new Action(() => { }));
+
+                        // 4. Query the game state engine safely
+                        string gameState = MoveGenerator.EvaluateGameEndState(_board);
+
+                        if (gameState.StartsWith("Checkmate") || gameState.StartsWith("Draw"))
+                        {
+                            MessageBox.Show(gameState, "Game Over", MessageBoxButton.OK, MessageBoxImage.Information);
+                            
+                            // Reset game structure
+                            _board = new Bitboard(); 
+                            RenderBoard();
+                            return;
+                        }
+                        else if (gameState == "Check")
+                        {
+                            MessageBox.Show("Check!", "Warning", MessageBoxButton.OK, MessageBoxImage.Warning);
+                            return;
+                        }
                     }
 
+                    // Fallback render to clear selections if the click was invalid
                     RenderBoard();
                 }
             }
