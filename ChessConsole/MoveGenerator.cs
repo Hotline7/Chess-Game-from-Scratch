@@ -140,5 +140,56 @@ namespace ChessConsole
 
             return moves;
         }
+
+        public static ulong GetBishopMoves(int square, ulong occupied)
+        {
+            ulong moves = 0UL;
+
+            int rank = square / 8;
+            int file = square % 8;
+
+            // 1. North-East (Up-Right)
+            for (int r = rank + 1, f = file + 1; r < 8 && f < 8; r++, f++)
+            {
+                int targetIndex = r * 8 + f;
+                ulong target = 1UL << targetIndex;
+                moves |= target;
+                if ((occupied & target) != 0) break; // Blocker hit
+            }
+
+            // 2. South-East (Down-Right)
+            for (int r = rank - 1, f = file + 1; r >= 0 && f < 8; r--, f++)
+            {
+                int targetIndex = r * 8 + f;
+                ulong target = 1UL << targetIndex;
+                moves |= target;
+                if ((occupied & target) != 0) break; // Blocker hit
+            }
+
+            // 3. North-West (Up-Left)
+            for (int r = rank + 1, f = file - 1; r < 8 && f >= 0; r++, f--)
+            {
+                int targetIndex = r * 8 + f;
+                ulong target = 1UL << targetIndex;
+                moves |= target;
+                if ((occupied & target) != 0) break; // Blocker hit
+            }
+
+            // 4. South-West (Down-Left)
+            for (int r = rank - 1, f = file - 1; r >= 0 && f >= 0; r--, f--)
+            {
+                int targetIndex = r * 8 + f;
+                ulong target = 1UL << targetIndex;
+                moves |= target;
+                if ((occupied & target) != 0) break; // Blocker hit
+            }
+
+            return moves;
+        }
+
+        public static ulong GetQueenMoves(int square, ulong occupied)
+        {
+            return GetRookMoves(square, occupied) | GetBishopMoves (square, occupied);
+        }    
     }
 }

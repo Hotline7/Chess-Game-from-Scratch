@@ -14,16 +14,10 @@ namespace ChessConsole
             int d4Square = 27; 
             
             // 3. Pass BOTH parameters: the square index AND the dynamic occupancy mask
-            ulong rookAttacksFromD4 = MoveGenerator.GetRookMoves(d4Square, board.CombinedOccupancy);
-
-            Console.WriteLine("Rook Attack Pattern from d4 (with standard starting layout blockers):");
-            PrintBitboard(rookAttacksFromD4);
-            //Console.WriteLine(Convert.ToString((long)rookAttacksFromD4, 2));
-            //Console.WriteLine($"0x{rookAttacksFromD4:X16}");
-            //Console.WriteLine($"Occupied: 0x{board.CombinedOccupancy:X16}");
-
-            PrintBitboard(1UL << 27);
-
+            ulong queenAttacksFromD4 = MoveGenerator.GetQueenMoves(d4Square, board.CombinedOccupancy);
+                        
+            Console.WriteLine("Queen Attack Pattern from d4 (with standard layout blockers):");
+            PrintBitboard(queenAttacksFromD4);
         }
 
         public static void PrintBitboard(ulong bitboard)
