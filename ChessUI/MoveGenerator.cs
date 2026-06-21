@@ -457,15 +457,6 @@ namespace ChessUI
                 ulong kingMask = board.Pieces[(int)us, (int)Piece.King];
                 int kingSquare = System.Numerics.BitOperations.TrailingZeroCount(kingMask);
 
-                // Debugging Start
-                Console.WriteLine($"Legal moves found: {legalMoves.Count}");
-
-                foreach (Move move in legalMoves)
-                {
-                    Console.WriteLine($"{move.FromSquare} -> {move.ToSquare}");
-                }
-                // Debugging End
-
                 if (IsSquareAttacked(kingSquare, them, board))
                 {
                     return "Check";
