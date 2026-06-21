@@ -109,7 +109,22 @@ namespace ChessConsole
                 }
             }
 
-            // 3. Recompute entire occupancy and pass the turn
+            // 3. NEW: Pawn Promotion Execution
+            if (movingPieceType == (int)Piece.Pawn)
+            {
+                int targetRank = move.ToSquare / 8;
+                // White reaches rank 8 (index 7) or Black reaches rank 1 (index 0)
+                if ((us == Colour.White && targetRank == 7) || (us == Colour.Black && targetRank == 0))
+                {
+                    // Vaporize the pawn from the target square
+                    Pieces[(int)us, (int)Piece.Pawn] &= ~toMask;
+                    
+                    // Default promote directly to a Queen for now (Auto-Queen framework)
+                    Pieces[(int)us, (int)Piece.Queen] |= toMask;
+                }
+            }
+
+            // 4. Recompute entire occupancy and pass the turn
             IsWhiteToMove = !IsWhiteToMove;
             UpdateOccupancy();
         }
