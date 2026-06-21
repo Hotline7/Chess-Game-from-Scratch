@@ -177,7 +177,7 @@ namespace ChessUI
 
                     if (isValid)
                     {
-                        // Intercept if this is a pawn promotion move
+                        // 1. Intercept if this is a pawn promotion move
                         ulong fromMask = 1UL << fromSquare;
                         Colour activeColour = _board.IsWhiteToMove ? Colour.White : Colour.Black;
                         bool isPawn = (_board.Pieces[(int)activeColour, (int)Piece.Pawn] & fromMask) != 0;
@@ -185,43 +185,33 @@ namespace ChessUI
 
                         if (isPawn && ((activeColour == Colour.White && targetRank == 7) || (activeColour == Colour.Black && targetRank == 0)))
                         {
-                            // 1. Fire up our UI selection window dialog
                             int pieceChoice = ShowPromotionDialog(activeColour);
-
-                            // 2. Map choice directly to your high-performance flags layout
-                            // Knight = 8, Bishop = 9, Rook = 10, Queen = 11
-                            int promotionFlag = 11; // Default fallback to Queen
+                            int promotionFlag = 11; 
                             if (pieceChoice == (int)Piece.Knight) promotionFlag = 8;
                             else if (pieceChoice == (int)Piece.Bishop) promotionFlag = 9;
                             else if (pieceChoice == (int)Piece.Rook) promotionFlag = 10;
                             
-                            // If the move was filtered as a capture by your engine, offset into flags 12-15
-                            if (chosenMove.IsCapture)
-                            {
-                                promotionFlag += 4;
-                            }
-
-                            // 3. Instantiate a pristine, packed 16-bit copy updating the flag metadata!
+                            if (chosenMove.IsCapture) promotionFlag += 4;
                             chosenMove = new Move(fromSquare, toSquare, promotionFlag);
                         }
 
-                        // 1. Physically update the board layout configurations
+                        // 2. Execute permanently on our core bitboard structures!
+                        // This will move the King AND automatically slide the Rook over on the backend!
                         _board.MakeMove(chosenMove);
 
-                        // 2. FORCE the UI to draw the piece landing on its new square BEFORE any alert box fires
+                        // 3. FORCE the UI to draw the piece landing on its new square BEFORE any alert box fires
+                        // This redraws the entire board, so the Rook automatically snaps to its new place!
                         RenderBoard();
 
-                        // 3. Let WPF refresh its window handles instantly
+                        // 4. Let WPF refresh its window handles instantly
                         Application.Current.Dispatcher.Invoke(System.Windows.Threading.DispatcherPriority.Render, new Action(() => { }));
 
-                        // 4. Query the game state engine safely
+                        // 5. Query the game state engine safely
                         string gameState = MoveGenerator.EvaluateGameEndState(_board);
 
                         if (gameState.StartsWith("Checkmate") || gameState.StartsWith("Draw"))
                         {
                             MessageBox.Show(gameState, "Game Over", MessageBoxButton.OK, MessageBoxImage.Information);
-                            
-                            // Reset game structure
                             _board = new Bitboard(); 
                             RenderBoard();
                             return;

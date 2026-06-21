@@ -20,6 +20,13 @@ namespace ChessConsole
         public ulong CombinedOccupancy;
         public bool IsWhiteToMove;
 
+        // Castling tracking tracking mask (4 bits)
+        // Bit 0 (1): White King-side (WK)
+        // Bit 1 (2): White Queen-side (WQ)
+        // Bit 2 (4): Black King-side (BK)
+        // Bit 3 (8): Black Queen-side (BQ)
+        public byte CastlingRights = 15; 
+
         public Bitboard()
         {
             InitialiseStandardGame();
@@ -46,6 +53,9 @@ namespace ChessConsole
             Pieces[(int)Colour.Black, (int)Piece.King]   = 0x1000000000000000UL;
 
             IsWhiteToMove = true;
+            
+            // Reset castling state to fully enabled on fresh initialization
+            CastlingRights = 15; 
 
             UpdateOccupancy();
         }
@@ -71,6 +81,9 @@ namespace ChessConsole
             Array.Copy(this.ColourOccupancy, clone.ColourOccupancy, this.ColourOccupancy.Length);
             clone.CombinedOccupancy = this.CombinedOccupancy;
             clone.IsWhiteToMove = this.IsWhiteToMove;
+            
+            // Ensure deep clones inherit active performance bitmasks perfectly
+            clone.CastlingRights = this.CastlingRights; 
             return clone;
         }
 
@@ -112,12 +125,9 @@ namespace ChessConsole
             // 3. Pawn Promotion Execution
             if (movingPieceType == (int)Piece.Pawn && move.IsPromotion)
             {
-                // Vaporize the pawn from the target landing square
                 Pieces[(int)us, (int)Piece.Pawn] &= ~toMask;
 
-                // Decode the 4-bit flag to assign the promotion choice
-                // Flags 8/12 = Knight, 9/13 = Bishop, 10/14 = Rook, 11/15 = Queen
-                int promotionCode = move.Flags & 0x3; // Isolates the bottom two bits of the flag block
+                int promotionCode = move.Flags & 0x3; 
                 
                 int chosenPiece = (int)Piece.Queen; // Fallback
                 if (promotionCode == 0) chosenPiece = (int)Piece.Knight;
@@ -128,7 +138,46 @@ namespace ChessConsole
                 Pieces[(int)us, chosenPiece] |= toMask;
             }
 
-            // 4. Recompute entire occupancy and pass the turn
+            // NEW 4. Castling Secondary Piece Manipulation (Snap the Rook over)
+            if (movingPieceType == (int)Piece.King && (move.Flags == 2 || move.Flags == 3))
+            {
+                int rookFrom = -1;
+                int rookTo = -1;
+
+                if (us == Colour.White)
+                {
+                    if (move.Flags == 2) { rookFrom = 7;  rookTo = 5; } // h1 -> f1
+                    else                 { rookFrom = 0;  rookTo = 3; } // a1 -> d1
+                }
+                else // Black
+                {
+                    if (move.Flags == 2) { rookFrom = 63; rookTo = 61; } // h8 -> f8
+                    else                 { rookFrom = 56; rookTo = 59; } // a8 -> d8
+                }
+
+                ulong rookFromMask = 1UL << rookFrom;
+                ulong rookToMask = 1UL << rookTo;
+
+                // Move Rook on bitboard
+                Pieces[(int)us, (int)Piece.Rook] &= ~rookFromMask;
+                Pieces[(int)us, (int)Piece.Rook] |= rookToMask;
+            }
+
+            // NEW 5. Update Historical Castling Rights (Strip status on movement or capture)
+            if (movingPieceType == (int)Piece.King)
+            {
+                // King moves wipe out both rights for that player permanently
+                if (us == Colour.White) CastlingRights &= 0b1100; // Keep Black, strip White
+                else                    CastlingRights &= 0b0011; // Keep White, strip Black
+            }
+
+            // Clear individual options if rooks leave initial corners or are taken
+            if (move.FromSquare == 7  || move.ToSquare == 7)  CastlingRights &= 0b1110; // Strip WK
+            if (move.FromSquare == 0  || move.ToSquare == 0)  CastlingRights &= 0b1101; // Strip WQ
+            if (move.FromSquare == 63 || move.ToSquare == 63) CastlingRights &= 0b1011; // Strip BK
+            if (move.FromSquare == 56 || move.ToSquare == 56) CastlingRights &= 0b0111; // Strip BQ
+
+            // 6. Recompute entire occupancy and pass the turn
             IsWhiteToMove = !IsWhiteToMove;
             UpdateOccupancy();
         }
