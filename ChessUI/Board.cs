@@ -20,12 +20,13 @@ namespace ChessUI
         public ulong CombinedOccupancy;
         public bool IsWhiteToMove;
 
-        // NEW: Castling tracking tracking mask (4 bits)
+        // Castling tracking tracking mask (4 bits)
         // Bit 0 (1): White King-side (WK)
         // Bit 1 (2): White Queen-side (WQ)
         // Bit 2 (4): Black King-side (BK)
         // Bit 3 (8): Black Queen-side (BQ)
-        public byte CastlingRights = 15; 
+        public byte CastlingRights = 15;
+        public int EnPassantTarget = -1;
 
         public Bitboard()
         {
@@ -54,8 +55,8 @@ namespace ChessUI
 
             IsWhiteToMove = true;
             
-            // NEW: Reset castling state to fully enabled on fresh initialization
-            CastlingRights = 15; 
+            CastlingRights = 15;
+            EnPassantTarget = -1;
 
             UpdateOccupancy();
         }
@@ -82,8 +83,9 @@ namespace ChessUI
             clone.CombinedOccupancy = this.CombinedOccupancy;
             clone.IsWhiteToMove = this.IsWhiteToMove;
             
-            // NEW: Ensure deep clones inherit active performance bitmasks perfectly
-            clone.CastlingRights = this.CastlingRights; 
+            // Ensure deep clones inherit active performance bitmasks perfectly
+            clone.CastlingRights = this.CastlingRights;
+            clone.EnPassantTarget = this.EnPassantTarget;
             return clone;
         }
 
@@ -108,11 +110,14 @@ namespace ChessUI
 
             if (movingPieceType == -1) return; // Safety check
 
+            // Cache if this move was marked as an En Passant capture BEFORE executing
+            bool isEpCapture = movingPieceType == (int)Piece.Pawn && move.Flags == 5;
+
             // 1. Move our piece execution
             Pieces[(int)us, movingPieceType] &= ~fromMask; // Remove from source
             Pieces[(int)us, movingPieceType] |= toMask;  // Place on target
 
-            // 2. Handle captures (if an enemy piece sits on the target square, vaporize it)
+            // 2. Handle standard captures
             for (int p = 0; p < 6; p++)
             {
                 if ((Pieces[(int)them, p] & toMask) != 0)
@@ -121,63 +126,71 @@ namespace ChessUI
                     break;
                 }
             }
+            //3. En Passant Mechanics
+            if (isEpCapture)
+            {
+                // The enemy pawn sits on the same rank as our starting pawn, but on the landing file
+                int enemyPawnSquare = (us == Colour.White) ? (move.ToSquare - 8) : (move.ToSquare + 8);
+                ulong enemyPawnMask = 1UL << enemyPawnSquare;
 
-            // 3. Pawn Promotion Execution
+                // Vaporize the enemy pawn out of existence
+                Pieces[(int)them, (int)Piece.Pawn] &= ~enemyPawnMask;
+            }
+
+            // 4. Pawn Promotion Execution
             if (movingPieceType == (int)Piece.Pawn && move.IsPromotion)
             {
                 Pieces[(int)us, (int)Piece.Pawn] &= ~toMask;
-
                 int promotionCode = move.Flags & 0x3; 
-                
-                int chosenPiece = (int)Piece.Queen; // Fallback
+                int chosenPiece = (int)Piece.Queen;
                 if (promotionCode == 0) chosenPiece = (int)Piece.Knight;
                 else if (promotionCode == 1) chosenPiece = (int)Piece.Bishop;
                 else if (promotionCode == 2) chosenPiece = (int)Piece.Rook;
-                else if (promotionCode == 3) chosenPiece = (int)Piece.Queen;
-
                 Pieces[(int)us, chosenPiece] |= toMask;
             }
 
-            // NEW 4. Castling Secondary Piece Manipulation (Snap the Rook over)
+            // 5. Castling Secondary Piece Manipulation
             if (movingPieceType == (int)Piece.King && (move.Flags == 2 || move.Flags == 3))
             {
-                int rookFrom = -1;
-                int rookTo = -1;
-
+                int rookFrom = -1; int rookTo = -1;
                 if (us == Colour.White)
                 {
-                    if (move.Flags == 2) { rookFrom = 7;  rookTo = 5; } // h1 -> f1
-                    else                 { rookFrom = 0;  rookTo = 3; } // a1 -> d1
+                    if (move.Flags == 2) { rookFrom = 7;  rookTo = 5; }
+                    else                 { rookFrom = 0;  rookTo = 3; }
                 }
-                else // Black
+                else
                 {
-                    if (move.Flags == 2) { rookFrom = 63; rookTo = 61; } // h8 -> f8
-                    else                 { rookFrom = 56; rookTo = 59; } // a8 -> d8
+                    if (move.Flags == 2) { rookFrom = 63; rookTo = 61; }
+                    else                 { rookFrom = 56; rookTo = 59; }
                 }
-
-                ulong rookFromMask = 1UL << rookFrom;
-                ulong rookToMask = 1UL << rookTo;
-
-                // Move Rook on bitboard
-                Pieces[(int)us, (int)Piece.Rook] &= ~rookFromMask;
-                Pieces[(int)us, (int)Piece.Rook] |= rookToMask;
+                Pieces[(int)us, (int)Piece.Rook] &= ~(1UL << rookFrom);
+                Pieces[(int)us, (int)Piece.Rook] |= (1UL << rookTo);
             }
 
-            // NEW 5. Update Historical Castling Rights (Strip status on movement or capture)
+            // 6. EN PASSANT STATE HISTORICAL TRACKING
+            // If a pawn just pushed 2 squares forward, mark the square it skipped over
+            if (movingPieceType == (int)Piece.Pawn && Math.Abs(move.ToSquare - move.FromSquare) == 16)
+            {
+                EnPassantTarget = (us == Colour.White) ? (move.FromSquare + 8) : (move.FromSquare - 8);
+            }
+            else
+            {
+                // Any other move type completely wipes the en passant window out
+                EnPassantTarget = -1;
+            }
+
+            // 7. Update Historical Castling Rights
             if (movingPieceType == (int)Piece.King)
             {
-                // King moves wipe out both rights for that player permanently
-                if (us == Colour.White) CastlingRights &= 0b1100; // Keep Black, strip White
-                else                    CastlingRights &= 0b0011; // Keep White, strip Black
+                if (us == Colour.White) CastlingRights &= 0b1100;
+                else                    CastlingRights &= 0b0011;
             }
+            if (move.FromSquare == 7  || move.ToSquare == 7)  CastlingRights &= 0b1110;
+            if (move.FromSquare == 0  || move.ToSquare == 0)  CastlingRights &= 0b1101;
+            if (move.FromSquare == 63 || move.ToSquare == 63) CastlingRights &= 0b1011;
+            if (move.FromSquare == 56 || move.ToSquare == 56) CastlingRights &= 0b0111;
 
-            // Clear individual options if rooks leave initial corners or are taken
-            if (move.FromSquare == 7  || move.ToSquare == 7)  CastlingRights &= 0b1110; // Strip WK
-            if (move.FromSquare == 0  || move.ToSquare == 0)  CastlingRights &= 0b1101; // Strip WQ
-            if (move.FromSquare == 63 || move.ToSquare == 63) CastlingRights &= 0b1011; // Strip BK
-            if (move.FromSquare == 56 || move.ToSquare == 56) CastlingRights &= 0b0111; // Strip BQ
-
-            // 6. Recompute entire occupancy and pass the turn
+            // 8. Recompute entire occupancy and pass the turn
             IsWhiteToMove = !IsWhiteToMove;
             UpdateOccupancy();
         }

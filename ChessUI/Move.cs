@@ -1,5 +1,5 @@
 namespace ChessUI
-{  
+{
     public readonly struct Move
     {
         // The single 16-bit container holding all our packed data
@@ -26,6 +26,10 @@ namespace ChessUI
 
         public bool IsCapture => (Flags & 0x4) != 0;
         public bool IsPromotion => (Flags & 0x8) != 0;
+        public bool IsKingSideCastle => Flags == 2;
+        public bool IsQueenSideCastle => Flags == 3;
+        public bool IsCastle => IsKingSideCastle || IsQueenSideCastle;
+        public bool IsEnPassant => Flags == 5;
 
         public override string ToString()
         {

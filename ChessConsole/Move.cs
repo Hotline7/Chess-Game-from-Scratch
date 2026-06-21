@@ -29,6 +29,7 @@ namespace ChessConsole
         public bool IsKingSideCastle => Flags == 2;
         public bool IsQueenSideCastle => Flags == 3;
         public bool IsCastle => IsKingSideCastle || IsQueenSideCastle;
+        public bool IsEnPassant => Flags == 5;
 
         public override string ToString()
         {

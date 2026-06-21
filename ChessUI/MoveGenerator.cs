@@ -248,15 +248,45 @@ namespace ChessUI
                 ulong singlePawnMask = 1UL << fromSquare;
                 ulong attackMask = GetPawnMoves(singlePawnMask, occupied, enemyPieces, us);
 
+                // Process standard single pushes, double pushes, and standard captures
                 while (attackMask != 0)
                 {
                     int toSquare = BitOperations.TrailingZeroCount(attackMask);
                     int flag = 0;
-                    if (Math.Abs(toSquare - fromSquare) == 16) flag = 1;
+                    if (Math.Abs(toSquare - fromSquare) == 16) flag = 1; // Double push
 
                     moveList.Add(new Move(fromSquare, toSquare, flag));
                     attackMask &= (attackMask - 1);
                 }
+
+                // NEW: Calculate En Passant Pseudo-Legal Moves
+                if (board.EnPassantTarget != -1)
+                {
+                    ulong notA = ~0x0101010101010101UL;
+                    ulong notH = ~0x8080808080808080UL;
+                    
+                    // White En Passant striking diagonals (+7 or +9)
+                    if (us == Colour.White)
+                    {
+                        ulong epLeft = (singlePawnMask << 7) & notH;
+                        ulong epRight = (singlePawnMask << 9) & notA;
+                        ulong targetMask = 1UL << board.EnPassantTarget;
+
+                        if ((epLeft & targetMask) != 0)  moveList.Add(new Move(fromSquare, board.EnPassantTarget, 5));
+                        if ((epRight & targetMask) != 0) moveList.Add(new Move(fromSquare, board.EnPassantTarget, 5));
+                    }
+                    // Black En Passant striking diagonals (-9 or -7)
+                    else
+                    {
+                        ulong epLeft = (singlePawnMask >> 9) & notH;
+                        ulong epRight = (singlePawnMask >> 7) & notA;
+                        ulong targetMask = 1UL << board.EnPassantTarget;
+
+                        if ((epLeft & targetMask) != 0)  moveList.Add(new Move(fromSquare, board.EnPassantTarget, 5));
+                        if ((epRight & targetMask) != 0) moveList.Add(new Move(fromSquare, board.EnPassantTarget, 5));
+                    }
+                }
+
                 pawns &= (pawns - 1);
             }
 
