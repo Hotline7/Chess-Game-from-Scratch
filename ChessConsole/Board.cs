@@ -109,19 +109,23 @@ namespace ChessConsole
                 }
             }
 
-            // 3. NEW: Pawn Promotion Execution
-            if (movingPieceType == (int)Piece.Pawn)
+            // 3. Pawn Promotion Execution
+            if (movingPieceType == (int)Piece.Pawn && move.IsPromotion)
             {
-                int targetRank = move.ToSquare / 8;
-                // White reaches rank 8 (index 7) or Black reaches rank 1 (index 0)
-                if ((us == Colour.White && targetRank == 7) || (us == Colour.Black && targetRank == 0))
-                {
-                    // Vaporize the pawn from the target square
-                    Pieces[(int)us, (int)Piece.Pawn] &= ~toMask;
-                    
-                    // Default promote directly to a Queen for now (Auto-Queen framework)
-                    Pieces[(int)us, (int)Piece.Queen] |= toMask;
-                }
+                // Vaporize the pawn from the target landing square
+                Pieces[(int)us, (int)Piece.Pawn] &= ~toMask;
+
+                // Decode the 4-bit flag to assign the promotion choice
+                // Flags 8/12 = Knight, 9/13 = Bishop, 10/14 = Rook, 11/15 = Queen
+                int promotionCode = move.Flags & 0x3; // Isolates the bottom two bits of the flag block
+                
+                int chosenPiece = (int)Piece.Queen; // Fallback
+                if (promotionCode == 0) chosenPiece = (int)Piece.Knight;
+                else if (promotionCode == 1) chosenPiece = (int)Piece.Bishop;
+                else if (promotionCode == 2) chosenPiece = (int)Piece.Rook;
+                else if (promotionCode == 3) chosenPiece = (int)Piece.Queen;
+
+                Pieces[(int)us, chosenPiece] |= toMask;
             }
 
             // 4. Recompute entire occupancy and pass the turn

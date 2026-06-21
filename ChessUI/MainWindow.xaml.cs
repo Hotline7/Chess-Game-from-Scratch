@@ -177,6 +177,34 @@ namespace ChessUI
 
                     if (isValid)
                     {
+                        // Intercept if this is a pawn promotion move
+                        ulong fromMask = 1UL << fromSquare;
+                        Colour activeColour = _board.IsWhiteToMove ? Colour.White : Colour.Black;
+                        bool isPawn = (_board.Pieces[(int)activeColour, (int)Piece.Pawn] & fromMask) != 0;
+                        int targetRank = toSquare / 8;
+
+                        if (isPawn && ((activeColour == Colour.White && targetRank == 7) || (activeColour == Colour.Black && targetRank == 0)))
+                        {
+                            // 1. Fire up our UI selection window dialog
+                            int pieceChoice = ShowPromotionDialog(activeColour);
+
+                            // 2. Map choice directly to your high-performance flags layout
+                            // Knight = 8, Bishop = 9, Rook = 10, Queen = 11
+                            int promotionFlag = 11; // Default fallback to Queen
+                            if (pieceChoice == (int)Piece.Knight) promotionFlag = 8;
+                            else if (pieceChoice == (int)Piece.Bishop) promotionFlag = 9;
+                            else if (pieceChoice == (int)Piece.Rook) promotionFlag = 10;
+                            
+                            // If the move was filtered as a capture by your engine, offset into flags 12-15
+                            if (chosenMove.IsCapture)
+                            {
+                                promotionFlag += 4;
+                            }
+
+                            // 3. Instantiate a pristine, packed 16-bit copy updating the flag metadata!
+                            chosenMove = new Move(fromSquare, toSquare, promotionFlag);
+                        }
+
                         // 1. Physically update the board layout configurations
                         _board.MakeMove(chosenMove);
 
@@ -209,6 +237,77 @@ namespace ChessUI
                     RenderBoard();
                 }
             }
+        }
+
+        private int ShowPromotionDialog(Colour playerColour)
+        {
+            // Create a temporary pop-up window modal
+            Window dialog = new Window
+            {
+                Title = "Pawn Promotion",
+                Width = 420,
+                Height = 140,
+                WindowStartupLocation = WindowStartupLocation.CenterOwner,
+                Owner = this,
+                ResizeMode = ResizeMode.NoResize,
+                WindowStyle = WindowStyle.ToolWindow,
+                Background = new SolidColorBrush(Color.FromRgb(30, 30, 30))
+            };
+
+            StackPanel panel = new StackPanel 
+            { 
+                Orientation = Orientation.Horizontal, 
+                HorizontalAlignment = HorizontalAlignment.Center,
+                VerticalAlignment = VerticalAlignment.Center
+            };
+            
+            int selectedPieceType = (int)Piece.Queen; // Default fallback selection
+            string colourStr = playerColour == Colour.White ? "White" : "Black";
+
+            // The options we are offering the user: Queen, Rook, Bishop, Knight
+            int[] options = { (int)Piece.Queen, (int)Piece.Rook, (int)Piece.Bishop, (int)Piece.Knight };
+
+            foreach (int pieceType in options)
+            {
+                string pieceName = Enum.GetName(typeof(Piece), pieceType) ?? "Queen";
+                
+                Button btn = new Button
+                {
+                    Width = 80,
+                    Height = 80,
+                    Margin = new Thickness(5),
+                    Background = new SolidColorBrush(Color.FromRgb(45, 45, 48)),
+                    BorderThickness = new Thickness(0),
+                    Tag = pieceType
+                };
+
+                // Pull the exact asset PNG path we downloaded earlier for the buttons
+                string uriPath = $"pack://application:,,,/Assets/{colourStr}/{pieceName}.png";
+                Image img = new Image
+                {
+                    Source = new BitmapImage(new Uri(uriPath)),
+                    Margin = new Thickness(4)
+                };
+                btn.Content = img;
+
+                // When clicked, save the selection, close the modal, and let execution resume
+                btn.Click += (s, e) =>
+                {
+                    if (s is Button clickedButton && clickedButton.Tag is int pieceTag)
+                    {
+                        selectedPieceType = pieceTag;
+                        dialog.DialogResult = true;
+                        dialog.Close();
+                    }
+                };
+
+                panel.Children.Add(btn);
+            }
+
+            dialog.Content = panel;
+            dialog.ShowDialog();
+
+            return selectedPieceType;
         }
     }
 }
